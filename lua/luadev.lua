@@ -63,9 +63,8 @@ local function append_buf(lines, hl)
       a.nvim_buf_add_highlight(s.buf, -1, hl, i, 0, -1)
     end
   end
-  local curwin = a.nvim_get_current_win()
   for _,win in ipairs(a.nvim_list_wins()) do
-    if a.nvim_win_get_buf(win) == s.buf and win ~= curwin then
+    if a.nvim_win_get_buf(win) == s.buf then
       a.nvim_win_set_cursor(win, {l1, 1e9})
     end
   end
