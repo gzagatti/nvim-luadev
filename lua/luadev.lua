@@ -1,6 +1,7 @@
 local luadev_inspect = require'luadev.inspect'
 
 local a = vim.api
+local fn = vim.fn
 if _G._luadev_mod == nil then
     _G._luadev_mod = {execount = 0}
 end
@@ -116,6 +117,20 @@ local function ld_pcall(chunk, ...)
   return unpack(res)
 end
 
+local function clean_str(str, ext)
+  local bufname = fn.expand("%")
+  if bufname == "[nvim-lua]" then
+    counter = str:match("^%d+>")
+    if counter then
+      str = str:gsub("^%d+>", string.rep(" ", string.len(counter)))
+    end
+  end
+  if ext == "vim" then
+    str = "vim.cmd[["..str.."]]"
+  end
+  return str
+end
+
 local function default_reader(str, count)
   local name = "@[luadev "..count.."]"
   local chunk, err = loadstring("return \n"..str, name)
@@ -125,9 +140,10 @@ local function default_reader(str, count)
   return chunk, err
 end
 
-local function exec(str)
+local function exec(str, ext)
   local count = s.execount + 1
   s.execount = count
+  str = clean_str(str, ext)
   local reader = s.reader or default_reader
   local chunk, err = reader(str, count)
   local inlines = splitlines(dedent(str))
