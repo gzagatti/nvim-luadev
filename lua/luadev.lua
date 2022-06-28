@@ -22,7 +22,7 @@ local function open_win()
   end
   create_buf()
   local w0 = a.nvim_get_current_win()
-  a.nvim_command("new")
+  a.nvim_command("split")
   local w = a.nvim_get_current_win()
   a.nvim_win_set_buf(w,s.buf)
   a.nvim_set_current_win(w0)
