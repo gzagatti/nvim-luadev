@@ -13,6 +13,7 @@ local function create_buf()
   end
   local buf = a.nvim_create_buf(true,true)
   a.nvim_buf_set_name(buf, "[nvim-lua]")
+  a.nvim_buf_set_option(buf, "filetype", "lua")
   s.buf = buf
 end
 
@@ -135,15 +136,13 @@ local function exec(str)
     inlines[#inlines] = nil
   end
   firstmark = tostring(count)..">"
-  contmark = string.rep(".", string.len(firstmark))
+  contmark = string.rep(" ", string.len(firstmark))
   for i,l in ipairs(inlines) do
     local marker = ((i == 1) and firstmark) or contmark
     inlines[i] = marker.." "..l
   end
   local start = append_buf(inlines)
-  for i,_ in ipairs(inlines) do
-     a.nvim_buf_add_highlight(s.buf, -1, "Question", start+i-1, 0, 2)
-  end
+  a.nvim_buf_add_highlight(s.buf, -1, "Question", start, 0, string.len(firstmark))
   if chunk == nil then
     append_buf(err,"WarningMsg")
   else
@@ -188,8 +187,8 @@ local funcs = {
   exec=exec,
   print=luadev_print,
   append_buf=append_buf,
-  err_wrap = err_wrap,
-  schedule_wrap = schedule_wrap,
+  err_wrap=err_wrap,
+  schedule_wrap=schedule_wrap,
 }
 
 -- TODO: export abstraction for autoreload
