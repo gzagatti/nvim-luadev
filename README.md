@@ -8,7 +8,9 @@ Use the folllowing mappings to execute lua code:
 Binding                       | Action
 -------------------------     | ------
 `<Plug>(Luadev-RunLine)`      | Execute the current line
+`<Plug>(Luadev-RunVimLine)`   | Execute the current line by wrapping `vim.cmd` such that it gets executed as vimscript
 `<Plug>(Luadev-Run)`          | Operator to execute lua code over a movement or text object.
+`<Plug>(Luadev-RunVim)`       | Operator to execute lua code over a movement or text object by wrapping `vim.cmd` such that it gets executed as vimscript.
 `<Plug>(Luadev-RunWord)`      | Eval identifier under cursor, including `table.attr`
 `<Plug>(Luadev-Complete)`     | in insert mode: complete (nested) global table fields
 
