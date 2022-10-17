@@ -126,7 +126,7 @@ local function clean_str(str, ext)
     end
   end
   if ext == "vim" then
-    str = "vim.cmd[["..str.."]]"
+    str = "vim.api.nvim_exec(\n[[\n"..str.."\n]],\ntrue)"
   end
   return str
 end
