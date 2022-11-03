@@ -3,7 +3,7 @@ local luadev_inspect = require'luadev.inspect'
 local a = vim.api
 local fn = vim.fn
 if _G._luadev_mod == nil then
-    _G._luadev_mod = {execount = 0}
+    _G._luadev_mod = {execount = 0, exehistory = {}}
 end
 
 local s = _G._luadev_mod
@@ -75,10 +75,14 @@ end
 local function luadev_print(...)
   local strs = {}
   local args = {...}
+  -- print like `_ = [[ ... ]]` to avoid parsing errors
+  -- an `_` is commonly used as a placeholder when you want to ignore the variable
+  -- see: http://lua-users.org/wiki/LuaStyleGuide
   for i = 1,select('#', ...) do
-    strs[i] = tostring(args[i])
+    local marker = (i == 1) and "_ = [[\n" or ""
+    strs[i] = marker .. tostring(args[i])
   end
-  append_buf(table.concat(strs, ' '))
+  append_buf(table.concat(strs, ' ') .. "\n]]")
 end
 
 local function dedent(str, leave_indent)
@@ -117,16 +121,27 @@ local function ld_pcall(chunk, ...)
   return unpack(res)
 end
 
+-- restores the counter to original states
+-- it assumes that the modified counter remains in the original place with the
+-- same number of lines
+local function restore_counter(counter)
+  original = s.exehistory[counter]
+  a.nvim_buf_set_lines(s.buf, original.start, original.start + original.nlines, true, original.lines)
+end
+
 local function clean_str(str, ext)
   local bufname = fn.expand("%")
   if bufname == "[nvim-lua]" then
-    counter = str:match("^%d+>")
+    counter = str:match("^-- %d+>")
     if counter then
-      str = str:gsub("^%d+>", string.rep(" ", string.len(counter)))
+      str = str:gsub("^-- %d+>", string.rep(" ", string.len(counter)))
     end
   end
   if ext == "vim" then
     str = "vim.api.nvim_exec(\n[[\n"..str.."\n]],\ntrue)"
+  end
+  if counter then
+    restore_counter(counter)
   end
   return str
 end
@@ -150,16 +165,18 @@ local function exec(str, ext)
   if inlines[#inlines] == "" then
     inlines[#inlines] = nil
   end
-  firstmark = tostring(count)..">"
-  contmark = string.rep(" ", string.len(firstmark))
+  -- denote input with comments like `-- 1> 1 + 1` to avoid parsing errors
+  firstmark = "-- " .. tostring(count) .. ">"
+  contmark = "--" .. string.rep(" ", string.len(firstmark))
   for i,l in ipairs(inlines) do
     local marker = ((i == 1) and firstmark) or contmark
     inlines[i] = marker.." "..l
   end
   local start = append_buf(inlines)
-  a.nvim_buf_add_highlight(s.buf, -1, "Question", start, 0, string.len(firstmark))
+  s.exehistory[firstmark] = { start=start, nlines=#inlines, lines=inlines }
   if chunk == nil then
-    append_buf(err,"WarningMsg")
+    -- adds comment to error line to avoid parsing errors
+    append_buf("-- " .. err,"WarningMsg")
   else
     local oldprint = _G.print
     _G.print = luadev_print
@@ -168,7 +185,8 @@ local function exec(str, ext)
     if st == false then
       append_buf(res,"WarningMsg")
     elseif doeval or res ~= nil then
-      append_buf(luadev_inspect(res))
+      -- adds `_ = ... ` to the output to avoid parsing errors
+      append_buf("_ = " .. luadev_inspect(res))
     end
   end
   append_buf({""})

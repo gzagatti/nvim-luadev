@@ -14,7 +14,8 @@ function! s:luadev_run_line(ext)
   let line = getline(".")
 
   if expand("%") == "[nvim-lua]"
-    if line !~ '^\d\+>'
+    " input counter like `-- 1> 1 + 1`
+    if line !~ '^-- \d\+>'
       delete
     else
     endif
