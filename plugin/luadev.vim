@@ -37,7 +37,7 @@ function! s:luadev_run_operator(is_op, ext = 'lua')
     if  a:is_op == v:true || lnum1 == lnum2
       let lines[-1] = lines[-1][: col2 - (&selection == 'inclusive' ? 1 : 2)]
       let lines[0] = lines[0][col1 - 1:]
-      if expand("%") == "[nvim-lua]" && lines[0] !~ '^\d\+>'
+      if expand("%") == "[nvim-lua]" && lines[0] !~ '^-- \d\+>'
         execute lnum1 ";" lnum2 "delete"
       endif
     endif

@@ -122,19 +122,36 @@ local function ld_pcall(chunk, ...)
 end
 
 -- restores the counter to original states
--- it assumes that the modified counter remains in the original place with the
--- same number of lines
 local function restore_counter(counter)
-  original = s.exehistory[counter]
-  a.nvim_buf_set_lines(s.buf, original.start, original.start + original.nlines, true, original.lines)
+  local original = s.exehistory[counter]
+  -- an input will be of the form `-- 1> ...`, starting from the beginning of
+  -- the file we look for the first set of lines matching the input counter
+  local start_regex = vim.regex("^" .. counter)
+  local end_regex = vim.regex("^[^-]")
+  local input_start = nil
+  local input_end = nil
+  for line=0,a.nvim_buf_line_count(s.buf)-1 do
+    if input_start == nil and start_regex:match_line(s.buf, line) then
+      input_start = line
+    end
+    if input_start ~= nil and end_regex:match_line(s.buf, line) then
+      input_end = line
+      -- delete the matched lines
+      a.nvim_buf_set_lines(s.buf, input_start, input_end, true, {})
+      -- replace with the original call
+      a.nvim_buf_set_lines(s.buf, input_start, input_start, true, original.lines)
+      return
+    end
+  end
 end
 
 local function clean_str(str, ext)
   local bufname = fn.expand("%")
   if bufname == "[nvim-lua]" then
-    counter = str:match("^-- %d+>")
+    counter = str:match("^[-][-] %d+>")
     if counter then
-      str = str:gsub("^-- %d+>", string.rep(" ", string.len(counter)))
+      str = str:gsub("^[-][-] %d+>", "")
+      str = str:gsub("\n[-][-]" .. string.rep(" ", string.len(counter)-2), "\n")
     end
   end
   if ext == "vim" then
@@ -167,13 +184,13 @@ local function exec(str, ext)
   end
   -- denote input with comments like `-- 1> 1 + 1` to avoid parsing errors
   firstmark = "-- " .. tostring(count) .. ">"
-  contmark = "--" .. string.rep(" ", string.len(firstmark))
+  contmark = "--" .. string.rep(" ", string.len(firstmark)-2)
   for i,l in ipairs(inlines) do
     local marker = ((i == 1) and firstmark) or contmark
     inlines[i] = marker.." "..l
   end
   local start = append_buf(inlines)
-  s.exehistory[firstmark] = { start=start, nlines=#inlines, lines=inlines }
+  s.exehistory[firstmark] = { start=start, lines=inlines }
   if chunk == nil then
     -- adds comment to error line to avoid parsing errors
     append_buf("-- " .. err,"WarningMsg")
